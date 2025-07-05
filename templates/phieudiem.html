@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý phiếu điểm rèn luyện</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold text-indigo-700 mb-4">📄 Quản lý phiếu điểm rèn luyện</h1>
+    <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
+
+    <!-- Form -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+        <h2 class="text-xl font-semibold mb-2">Thêm / Sửa phiếu điểm</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+            <select id="IDSINHVIEN" class="border p-2 rounded" required>
+                <option value="">Chọn sinh viên</option>
+            </select>
+            <select id="IDHOCKY" class="border p-2 rounded" required>
+                <option value="">Chọn học kỳ</option>
+            </select>
+            <select id="IDDANHGIA" class="border p-2 rounded" required>
+                <option value="">Chọn đánh giá</option>
+            </select>
+            <input id="TONGDIEM" type="number" placeholder="Tổng điểm (0-100)" class="border p-2 rounded" min="0" max="100" required>
+            <input id="XEPLOAI" type="text" placeholder="Xếp loại (Xuất sắc, Tốt, Khá, Trung bình, Yếu)" class="border p-2 rounded" required>
+            <input id="GHICHU" type="text" placeholder="Ghi chú" class="border p-2 rounded">
+            <div class="flex space-x-2 col-span-full md:col-span-1">
+                <button id="saveButton" onclick="addOrUpdatePhieuDiem()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">💾 Lưu</button>
+                <button id="cancelButton" onclick="clearForm()" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition hidden">🚫 Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded shadow overflow-x-auto">
+        <table class="min-w-full border-collapse border border-gray-300">
+            <thead class="bg-gray-200 text-gray-700">
+                <tr>
+                    <th class="border p-2">Mã SV</th>
+                    <th class="border p-2">Tên SV</th>
+                    <th class="border p-2">Học kỳ</th>
+                    <th class="border p-2">Đánh giá</th>
+                    <th class="border p-2">Tổng điểm</th>
+                    <th class="border p-2">Xếp loại</th>
+                    <th class="border p-2">Ghi chú</th>
+                    <th class="border p-2">Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="phieudiemTable" class="text-sm"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let sinhvienMap = {};
+    let hockyMap = {};
+    let danhgiaMap = {};
+
+    // Hàm thoát ký tự HTML để tránh XSS
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    async function loadSinhVienDropdown() {
+        try {
+            const res = await fetch('/api/sinhvien');
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            const select = document.getElementById('IDSINHVIEN');
+            select.innerHTML = '<option value="">Chọn sinh viên</option>';
+            data.forEach(sv => {
+                sinhvienMap[sv.IDSINHVIEN] = sv.HOVATEN;
+                const opt = document.createElement('option');
+                opt.value = sv.IDSINHVIEN;
+                opt.textContent = `${escapeHTML(sv.IDSINHVIEN)} - ${escapeHTML(sv.HOVATEN)}`;
+                select.appendChild(opt);
+            });
+        } catch (error) {
+            alert('Lỗi khi tải danh sách sinh viên: ' + (error.message || 'Không thể kết nối đến server'));
+        }
+    }
+
+    async function loadHocKyDropdown() {
+        try {
+            const res = await fetch('/api/hocky');
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            const select = document.getElementById('IDHOCKY');
+            select.innerHTML = '<option value="">Chọn học kỳ</option>';
+            data.forEach(hk => {
+                hockyMap[hk.IDHOCKY] = hk.TENHK;
+                const opt = document.createElement('option');
+                opt.value = hk.IDHOCKY;
+                opt.textContent = `${escapeHTML(hk.IDHOCKY)} - ${escapeHTML(hk.TENHK)}`;
+                select.appendChild(opt);
+            });
+        } catch (error) {
+            alert('Lỗi khi tải danh sách học kỳ: ' + (error.message || 'Không thể kết nối đến server'));
+        }
+    }
+
+    async function loadDanhGiaDropdown() {
+        try {
+            const res = await fetch('/api/danhgia');
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            const select = document.getElementById('IDDANHGIA');
+            select.innerHTML = '<option value="">Chọn đánh giá</option>';
+            data.forEach(dg => {
+                danhgiaMap[dg.IDDANHGIA] = dg.IDTIEUCHI;
+                const opt = document.createElement('option');
+                opt.value = dg.IDDANHGIA;
+                opt.textContent = `${escapeHTML(dg.IDDANHGIA)} - ${escapeHTML(dg.IDTIEUCHI)}`;
+                select.appendChild(opt);
+            });
+        } catch (error) {
+            alert('Lỗi khi tải danh sách đánh giá: ' + (error.message || 'Không thể kết nối đến server'));
+        }
+    }
+
+    async function loadPhieuDiem() {
+        try {
+            const res = await fetch('/api/phieudiem');
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            const tbody = document.getElementById('phieudiemTable');
+            tbody.innerHTML = '';
+            data.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border p-2">${escapeHTML(p.IDSINHVIEN)}</td>
+                    <td class="border p-2">${escapeHTML(sinhvienMap[p.IDSINHVIEN] || '')}</td>
+                    <td class="border p-2">${escapeHTML(hockyMap[p.IDHOCKY] || '')}</td>
+                    <td class="border p-2">${escapeHTML(p.IDDANHGIA)}</td>
+                    <td class="border p-2">${p.TONGDIEM}</td>
+                    <td class="border p-2">${escapeHTML(p.XEPLOAI)}</td>
+                    <td class="border p-2">${escapeHTML(p.GHICHU || '')}</td>
+                    <td class="border p-2 space-x-1">
+                        <button onclick="editPhieuDiem('${escapeHTML(p.IDSINHVIEN)}', '${escapeHTML(p.IDHOCKY)}', '${escapeHTML(p.IDDANHGIA)}', ${p.TONGDIEM}, '${escapeHTML(p.XEPLOAI)}', '${escapeHTML(p.GHICHU || '')}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">✏️ Sửa</button>
+                        <button onclick="deletePhieuDiem('${escapeHTML(p.IDSINHVIEN)}', '${escapeHTML(p.IDHOCKY)}', '${escapeHTML(p.IDDANHGIA)}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">🗑️ Xóa</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            alert('Lỗi khi tải danh sách phiếu điểm: ' + (error.message || 'Không thể kết nối đến server'));
+        }
+    }
+
+    async function addOrUpdatePhieuDiem() {
+        const IDSINHVIEN = document.getElementById('IDSINHVIEN').value;
+        const IDHOCKY = document.getElementById('IDHOCKY').value;
+        const IDDANHGIA = document.getElementById('IDDANHGIA').value;
+        const TONGDIEM = parseInt(document.getElementById('TONGDIEM').value);
+        const XEPLOAI = document.getElementById('XEPLOAI').value.trim();
+        const GHICHU = document.getElementById('GHICHU').value.trim() || '';
+
+        // Validation
+        if (!IDSINHVIEN || !IDHOCKY || !IDDANHGIA || isNaN(TONGDIEM) || !XEPLOAI) {
+            alert('Vui lòng nhập đầy đủ thông tin (Sinh viên, Học kỳ, Đánh giá, Tổng điểm, Xếp loại).');
+            return;
+        }
+        if (TONGDIEM < 0 || TONGDIEM > 100) {
+            alert('Tổng điểm phải từ 0 đến 100.');
+            return;
+        }
+        if (!['Xuất sắc', 'Tốt', 'Khá', 'Trung bình', 'Yếu'].includes(XEPLOAI)) {
+            alert('Xếp loại phải là: Xuất sắc, Tốt, Khá, Trung bình, hoặc Yếu.');
+            return;
+        }
+
+        const method = document.getElementById('saveButton').textContent.includes('Cập nhật') ? 'PUT' : 'POST';
+        const url = method === 'POST' ? '/api/phieudiem' : `/api/phieudiem/${IDSINHVIEN}/${IDHOCKY}/${IDDANHGIA}`;
+
+        const formData = new URLSearchParams({
+            IDSINHVIEN,
+            IDHOCKY,
+            IDDANHGIA,
+            TONGDIEM: TONGDIEM.toString(),
+            XEPLOAI,
+            GHICHU
+        });
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+
+            if (res.ok) {
+                alert(method === 'POST' ? 'Thêm phiếu điểm thành công!' : 'Cập nhật phiếu điểm thành công!');
+                clearForm();
+                loadPhieuDiem();
+            } else {
+                const errorData = await res.json();
+                alert('Lỗi: ' + (errorData.detail || 'Không thể thực hiện yêu cầu'));
+            }
+        } catch (error) {
+            alert('Lỗi khi gửi yêu cầu: ' + (error.message || 'Không thể kết nối đến server'));
+        }
+    }
+
+    function editPhieuDiem(IDSINHVIEN, IDHOCKY, IDDANHGIA, TONGDIEM, XEPLOAI, GHICHU) {
+        document.getElementById('IDSINHVIEN').value = IDSINHVIEN;
+        document.getElementById('IDHOCKY').value = IDHOCKY;
+        document.getElementById('IDDANHGIA').value = IDDANHGIA;
+        document.getElementById('TONGDIEM').value = TONGDIEM;
+        document.getElementById('XEPLOAI').value = XEPLOAI;
+        document.getElementById('GHICHU').value = GHICHU;
+        document.getElementById('saveButton').textContent = '📝 Cập nhật';
+        document.getElementById('cancelButton').classList.remove('hidden');
+    }
+
+    async function deletePhieuDiem(IDSINHVIEN, IDHOCKY, IDDANHGIA) {
+        if (confirm(`Bạn có chắc muốn xóa phiếu điểm của sinh viên ${IDSINHVIEN} trong học kỳ ${IDHOCKY}?`)) {
+            try {
+                const res = await fetch(`/api/phieudiem/${IDSINHVIEN}/${IDHOCKY}/${IDDANHGIA}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('Xóa phiếu điểm thành công!');
+                    loadPhieuDiem();
+                } else {
+                    const errorData = await res.json();
+                    alert('Lỗi khi xóa: ' + (errorData.detail || 'Không thể xóa phiếu điểm'));
+                }
+            } catch (error) {
+                alert('Lỗi khi gửi yêu cầu xóa: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+    }
+
+    function clearForm() {
+        document.getElementById('IDSINHVIEN').value = '';
+        document.getElementById('IDHOCKY').value = '';
+        document.getElementById('IDDANHGIA').value = '';
+        document.getElementById('TONGDIEM').value = '';
+        document.getElementById('XEPLOAI').value = '';
+        document.getElementById('GHICHU').value = '';
+        document.getElementById('saveButton').textContent = '💾 Lưu';
+        document.getElementById('cancelButton').classList.add('hidden');
+    }
+
+    window.onload = async () => {
+        await loadSinhVienDropdown();
+        await loadHocKyDropdown();
+        await loadDanhGiaDropdown();
+        await loadPhieuDiem();
+    };
+</script>
+</body>
+</html>

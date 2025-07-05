@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống quản lý điểm rèn luyện</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .gradient-bg {
+      background: linear-gradient(135deg, #6b21a8, #9333ea);
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      transition: transform 0.3s ease-in-out;
+    }
+    .footer-gradient {
+      background: linear-gradient(135deg, #4b5563, #374151);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex flex-col font-sans text-gray-800">
+  <!-- Header -->
+  <header class="gradient-bg text-white py-8 shadow-lg">
+    <div class="container mx-auto text-center">
+      <h1 class="text-4xl font-extrabold tracking-tight">🎓 Hệ thống quản lý điểm rèn luyện</h1>
+      <p class="mt-2 text-lg opacity-90">Theo dõi và đánh giá rèn luyện sinh viên theo từng học kỳ</p>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="container mx-auto p-6 flex-grow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Sinh viên -->
+      <a href="/sinhvien" class="card-hover bg-white p-6 rounded-xl shadow-md hover:shadow-xl border border-transparent hover:border-indigo-300 transition-all duration-300">
+        <div class="flex flex-col items-center text-indigo-600">
+          <i data-lucide="users" class="w-12 h-12 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+          <h2 class="text-2xl font-semibold">Quản lý sinh viên</h2>
+          <p class="text-sm text-gray-600 mt-2 text-center">Thêm, sửa, xóa thông tin sinh viên và lớp học</p>
+        </div>
+      </a>
+
+      <!-- Học kỳ -->
+      <a href="/hocky" class="card-hover bg-white p-6 rounded-xl shadow-md hover:shadow-xl border border-transparent hover:border-green-300 transition-all duration-300">
+        <div class="flex flex-col items-center text-green-600">
+          <i data-lucide="calendar" class="w-12 h-12 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+          <h2 class="text-2xl font-semibold">Quản lý học kỳ</h2>
+          <p class="text-sm text-gray-600 mt-2 text-center">Tạo và cập nhật thông tin học kỳ - năm học</p>
+        </div>
+      </a>
+
+      <!-- Tiêu chí -->
+      <a href="/tieuchi" class="card-hover bg-white p-6 rounded-xl shadow-md hover:shadow-xl border border-transparent hover:border-yellow-300 transition-all duration-300">
+        <div class="flex flex-col items-center text-yellow-600">
+          <i data-lucide="check-circle" class="w-12 h-12 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+          <h2 class="text-2xl font-semibold">Quản lý tiêu chí</h2>
+          <p class="text-sm text-gray-600 mt-2 text-center">Cập nhật danh sách tiêu chí đánh giá</p>
+        </div>
+      </a>
+
+      <!-- Đánh giá -->
+      <a href="/danhgia" class="card-hover bg-white p-6 rounded-xl shadow-md hover:shadow-xl border border-transparent hover:border-red-300 transition-all duration-300">
+        <div class="flex flex-col items-center text-red-600">
+          <i data-lucide="edit" class="w-12 h-12 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+          <h2 class="text-2xl font-semibold">Nhập điểm đánh giá</h2>
+          <p class="text-sm text-gray-600 mt-2 text-center">Nhập điểm từ sinh viên, cán bộ, CVHT</p>
+        </div>
+      </a>
+
+      <!-- Phiếu điểm -->
+      <a href="/phieudiem" class="card-hover bg-white p-6 rounded-xl shadow-md hover:shadow-xl border border-transparent hover:border-purple-300 transition-all duration-300">
+        <div class="flex flex-col items-center text-purple-600">
+          <i data-lucide="file-text" class="w-12 h-12 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+          <h2 class="text-2xl font-semibold">Phiếu điểm tổng</h2>
+          <p class="text-sm text-gray-600 mt-2 text-center">Tổng hợp điểm theo học kỳ và xếp loại</p>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer-gradient text-white py-6 mt-auto">
+    <div class="container mx-auto text-center">
+      <p class="text-lg">© 2025 - Hệ thống quản lý điểm rèn luyện sinh viên</p>
+      <p class="text-sm mt-1 opacity-80">Được phát triển với ❤️ bởi đội ngũ Gà Đông Tảo</p>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

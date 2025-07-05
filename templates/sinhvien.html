@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý sinh viên</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4 text-indigo-700">Quản lý sinh viên</h1>
+        <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
+
+        <!-- Form Thêm/Sửa -->
+        <div class="mb-6 bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-semibold mb-2">Thêm / Sửa sinh viên</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="IDSINHVIEN" type="text" placeholder="Mã sinh viên (VD: B24DCCN001)" class="border p-2 rounded" required>
+                <input id="HOVATEN" type="text" placeholder="Họ và tên" class="border p-2 rounded" required>
+                <input id="LOP" type="text" placeholder="Lớp (VD: D24CQCN01)" class="border p-2 rounded" required>
+                <input id="NGANHHOC" type="text" placeholder="Ngành học" class="border p-2 rounded" required>
+                <input id="NGAYSINH" type="date" class="border p-2 rounded">
+                <div class="flex space-x-2">
+                    <button id="saveButton" onclick="addOrUpdateSinhVien()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">💾 Lưu</button>
+                    <button id="cancelButton" onclick="clearForm()" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition hidden">🚫 Hủy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng sinh viên -->
+        <div class="overflow-x-auto bg-white shadow rounded">
+            <table class="min-w-full border border-gray-300">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="border p-2">Mã SV</th>
+                        <th class="border p-2">Họ tên</th>
+                        <th class="border p-2">Lớp</th>
+                        <th class="border p-2">Ngành học</th>
+                        <th class="border p-2">Ngày sinh</th>
+                        <th class="border p-2">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="sinhvienTable" class="text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Hàm thoát ký tự HTML để tránh XSS
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadSinhVien() {
+            try {
+                const res = await fetch('/api/sinhvien');
+                if (!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+                const tbody = document.getElementById('sinhvienTable');
+                tbody.innerHTML = '';
+                data.forEach(sv => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${escapeHTML(sv.IDSINHVIEN)}</td>
+                        <td class="border p-2">${escapeHTML(sv.HOVATEN)}</td>
+                        <td class="border p-2">${escapeHTML(sv.LOP || '')}</td>
+                        <td class="border p-2">${escapeHTML(sv.NGANHHOC)}</td>
+                        <td class="border p-2">${sv.NGAYSINH ? escapeHTML(sv.NGAYSINH) : ''}</td>
+                        <td class="border p-2 space-x-1">
+                            <button onclick="editSinhVien('${escapeHTML(sv.IDSINHVIEN)}', '${escapeHTML(sv.HOVATEN)}', '${escapeHTML(sv.LOP || '')}', '${escapeHTML(sv.NGANHHOC)}', '${escapeHTML(sv.NGAYSINH || '')}')" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">✏️ Sửa</button>
+                            <button onclick="deleteSinhVien('${escapeHTML(sv.IDSINHVIEN)}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">🗑️ Xóa</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                alert('Lỗi khi tải danh sách sinh viên: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        async function addOrUpdateSinhVien() {
+            const IDSINHVIEN = document.getElementById('IDSINHVIEN').value.trim();
+            const HOVATEN = document.getElementById('HOVATEN').value.trim();
+            const LOP = document.getElementById('LOP').value.trim();
+            const NGANHHOC = document.getElementById('NGANHHOC').value.trim();
+            const NGAYSINH = document.getElementById('NGAYSINH').value;
+
+            // Validation
+            if (!IDSINHVIEN || !HOVATEN || !LOP || !NGANHHOC) {
+                alert('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã SV, Họ tên, Lớp, Ngành học).');
+                return;
+            }
+            const method = document.getElementById('saveButton').textContent.includes('Cập nhật') ? 'PUT' : 'POST';
+            const url = method === 'POST' ? '/api/sinhvien' : `/api/sinhvien/${IDSINHVIEN}`;
+
+            const formData = new URLSearchParams({
+                IDSINHVIEN,
+                HOVATEN,
+                LOP,
+                NGANHHOC,
+                NGAYSINH: NGAYSINH || ''
+            });
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert(method === 'POST' ? 'Thêm sinh viên thành công!' : 'Cập nhật sinh viên thành công!');
+                    clearForm();
+                    loadSinhVien();
+                } else {
+                    const errorData = await res.json();
+                    alert('Lỗi: ' + (errorData.detail || 'Không thể thực hiện yêu cầu'));
+                }
+            } catch (error) {
+                alert('Lỗi khi gửi yêu cầu: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        function editSinhVien(IDSINHVIEN, HOVATEN, LOP, NGANHHOC, NGAYSINH) {
+            document.getElementById('IDSINHVIEN').value = IDSINHVIEN;
+            document.getElementById('HOVATEN').value = HOVATEN;
+            document.getElementById('LOP').value = LOP;
+            document.getElementById('NGANHHOC').value = NGANHHOC;
+            document.getElementById('NGAYSINH').value = NGAYSINH || '';
+            document.getElementById('saveButton').textContent = '📝 Cập nhật';
+            document.getElementById('cancelButton').classList.remove('hidden');
+        }
+
+        async function deleteSinhVien(IDSINHVIEN) {
+            if (confirm(`Bạn có chắc muốn xóa sinh viên ${IDSINHVIEN}?`)) {
+                try {
+                    const res = await fetch(`/api/sinhvien/${IDSINHVIEN}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        alert('Xóa sinh viên thành công!');
+                        loadSinhVien();
+                    } else {
+                        const errorData = await res.json();
+                        alert('Lỗi khi xóa: ' + (errorData.detail || 'Không thể xóa sinh viên'));
+                    }
+                } catch (error) {
+                    alert('Lỗi khi gửi yêu cầu xóa: ' + (error.message || 'Không thể kết nối đến server'));
+                }
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('IDSINHVIEN').value = '';
+            document.getElementById('HOVATEN').value = '';
+            document.getElementById('LOP').value = '';
+            document.getElementById('NGANHHOC').value = '';
+            document.getElementById('NGAYSINH').value = '';
+            document.getElementById('saveButton').textContent = '💾 Lưu';
+            document.getElementById('cancelButton').classList.add('hidden');
+        }
+
+        window.onload = loadSinhVien;
+    </script>
+</body>
+</html>

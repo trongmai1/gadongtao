@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý tiêu chí đánh giá</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4 text-indigo-700">📌 Quản lý tiêu chí đánh giá</h1>
+        <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
+
+        <!-- Form Thêm/Sửa -->
+        <div class="mb-6 bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-semibold mb-2">Thêm / Sửa tiêu chí</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input id="IDTIEUCHI" type="text" placeholder="Mã tiêu chí (VD: TC01)" class="border p-2 rounded" required>
+                <input id="TENTIEUCHI" type="text" placeholder="Tên tiêu chí" class="border p-2 rounded" required>
+                <input id="DIEMTOIDA" type="number" placeholder="Điểm tối đa (1–25)" class="border p-2 rounded" min="1" max="25" required>
+                <div class="flex space-x-2 col-span-full sm:col-span-1">
+                    <button id="saveButton" onclick="addOrUpdateTieuChi()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">💾 Lưu</button>
+                    <button id="cancelButton" onclick="clearForm()" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition hidden">🚫 Hủy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng tiêu chí -->
+        <div class="overflow-x-auto bg-white shadow rounded">
+            <table class="min-w-full border border-gray-300">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="border p-2">Mã tiêu chí</th>
+                        <th class="border p-2">Tên tiêu chí</th>
+                        <th class="border p-2">Điểm tối đa</th>
+                        <th class="border p-2">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="tieuchiTable" class="text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Hàm thoát ký tự HTML để tránh XSS
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadTieuChi() {
+            try {
+                const res = await fetch('/api/tieuchi');
+                if (!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+                const tbody = document.getElementById('tieuchiTable');
+                tbody.innerHTML = '';
+                data.forEach(tc => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${escapeHTML(tc.IDTIEUCHI)}</td>
+                        <td class="border p-2">${escapeHTML(tc.TENTIEUCHI)}</td>
+                        <td class="border p-2">${tc.DIEMTOIDA}</td>
+                        <td class="border p-2 space-x-1">
+                            <button onclick="editTieuChi('${escapeHTML(tc.IDTIEUCHI)}', '${escapeHTML(tc.TENTIEUCHI)}', ${tc.DIEMTOIDA})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">✏️ Sửa</button>
+                            <button onclick="deleteTieuChi('${escapeHTML(tc.IDTIEUCHI)}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">🗑️ Xóa</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                alert('Lỗi khi tải danh sách tiêu chí: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        async function addOrUpdateTieuChi() {
+            const IDTIEUCHI = document.getElementById('IDTIEUCHI').value.trim();
+            const TENTIEUCHI = document.getElementById('TENTIEUCHI').value.trim();
+            const DIEMTOIDA = parseInt(document.getElementById('DIEMTOIDA').value);
+
+            // Validation
+            if (!IDTIEUCHI || !TENTIEUCHI || isNaN(DIEMTOIDA)) {
+                alert('Vui lòng nhập đầy đủ thông tin (Mã tiêu chí, Tên tiêu chí, Điểm tối đa).');
+                return;
+            }
+            if (!IDTIEUCHI.match(/^TC\d{2}$/)) {
+                alert('Mã tiêu chí phải có định dạng TCxx (VD: TC01).');
+                return;
+            }
+            if (DIEMTOIDA < 1 || DIEMTOIDA > 25) {
+                alert('Điểm tối đa phải từ 1 đến 25.');
+                return;
+            }
+
+            const method = document.getElementById('saveButton').textContent.includes('Cập nhật') ? 'PUT' : 'POST';
+            const url = method === 'POST' ? '/api/tieuchi' : `/api/tieuchi/${IDTIEUCHI}`;
+
+            const formData = new URLSearchParams({
+                IDTIEUCHI,
+                TENTIEUCHI,
+                DIEMTOIDA: DIEMTOIDA.toString()
+            });
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert(method === 'POST' ? 'Thêm tiêu chí thành công!' : 'Cập nhật tiêu chí thành công!');
+                    clearForm();
+                    loadTieuChi();
+                } else {
+                    const errorData = await res.json();
+                    alert('Lỗi: ' + (errorData.detail || 'Không thể thực hiện yêu cầu'));
+                }
+            } catch (error) {
+                alert('Lỗi khi gửi yêu cầu: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        function editTieuChi(IDTIEUCHI, TENTIEUCHI, DIEMTOIDA) {
+            document.getElementById('IDTIEUCHI').value = IDTIEUCHI;
+            document.getElementById('TENTIEUCHI').value = TENTIEUCHI;
+            document.getElementById('DIEMTOIDA').value = DIEMTOIDA;
+            document.getElementById('saveButton').textContent = 'Cập nhật';
+            document.getElementById('cancelButton').classList.remove('hidden');
+        }
+
+        async function deleteTieuChi(IDTIEUCHI) {
+            if (confirm(`Bạn có chắc muốn xóa tiêu chí ${IDTIEUCHI}?`)) {
+                try {
+                    const res = await fetch(`/api/tieuchi/${IDTIEUCHI}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        alert('Xóa tiêu chí thành công!');
+                        loadTieuChi();
+                    } else {
+                        const errorData = await res.json();
+                        alert('Lỗi khi xóa: ' + (errorData.detail || 'Không thể xóa tiêu chí'));
+                    }
+                } catch (error) {
+                    alert('Lỗi khi gửi yêu cầu xóa: ' + (error.message || 'Không thể kết nối đến server'));
+                }
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('IDTIEUCHI').value = '';
+            document.getElementById('TENTIEUCHI').value = '';
+            document.getElementById('DIEMTOIDA').value = '';
+            document.getElementById('saveButton').textContent = 'Lưu';
+            document.getElementById('cancelButton').classList.add('hidden');
+        }
+
+        window.onload = loadTieuChi;
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý học kỳ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4 text-indigo-700">Quản lý học kỳ</h1>
+        <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
+        <div class="mb-6 bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-semibold mb-2">Thêm / Sửa học kỳ</h2>
+            <div class="flex flex-col gap-2">
+                <input id="IDHOCKY" type="text" placeholder="Mã học kỳ (VD: HK01)" class="border p-2 rounded" required>
+                <input id="TENHK" type="text" placeholder="Tên học kỳ (VD: Học kỳ 1)" class="border p-2 rounded" required>
+                <input id="NAMHOC" type="number" placeholder="Năm học (VD: 2023)" class="border p-2 rounded" min="2000" required>
+                <div class="flex space-x-2">
+                    <button id="saveButton" onclick="addOrUpdateHocKy()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">💾 Lưu</button>
+                    <button id="cancelButton" onclick="clearForm()" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition hidden">🚫 Hủy</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto bg-white shadow rounded">
+            <table class="w-full border-collapse border border-gray-300">
+                <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="border p-2">Mã học kỳ</th>
+                        <th class="border p-2">Tên học kỳ</th>
+                        <th class="border p-2">Năm học</th>
+                        <th class="border p-2">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="hockyTable" class="text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadHocKy() {
+            try {
+                const res = await fetch('/api/hocky');
+                if (!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+                const tbody = document.getElementById('hockyTable');
+                tbody.innerHTML = '';
+                data.forEach(hk => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2">${escapeHTML(hk.IDHOCKY)}</td>
+                        <td class="border p-2">${escapeHTML(hk.TENHK)}</td>
+                        <td class="border p-2">${hk.NAMHOC}</td>
+                        <td class="border p-2 space-x-1">
+                            <button onclick="editHocKy('${escapeHTML(hk.IDHOCKY)}', '${escapeHTML(hk.TENHK)}', ${hk.NAMHOC})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">✏️ Sửa</button>
+                            <button onclick="deleteHocKy('${escapeHTML(hk.IDHOCKY)}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">🗑️ Xóa</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                alert('Lỗi khi tải danh sách học kỳ: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        async function addOrUpdateHocKy() {
+            const IDHOCKY = document.getElementById('IDHOCKY').value.trim();
+            const TENHK = document.getElementById('TENHK').value.trim();
+            const NAMHOC = parseInt(document.getElementById('NAMHOC').value);
+
+            if (!IDHOCKY || !TENHK || !NAMHOC) {
+                alert('Vui lòng nhập đầy đủ thông tin (Mã học kỳ, Tên học kỳ, Năm học).');
+                return;
+            }
+            if (!IDHOCKY.match(/^HK\d{2}$/)) {
+                alert('Mã học kỳ phải có định dạng HKxx (VD: HK01).');
+                return;
+            }
+            if (NAMHOC < 2000) {
+                alert('Năm học phải lớn hơn hoặc bằng 2000.');
+                return;
+            }
+
+            const method = document.getElementById('saveButton').textContent.includes('Cập nhật') ? 'PUT' : 'POST';
+            const url = method === 'POST' ? '/api/hocky' : `/api/hocky/${IDHOCKY}`;
+
+            const formData = new URLSearchParams({
+                IDHOCKY,
+                TENHK,
+                NAMHOC: NAMHOC.toString()
+            });
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert(method === 'POST' ? 'Thêm học kỳ thành công!' : 'Cập nhật học kỳ thành công!');
+                    clearForm();
+                    loadHocKy();
+                } else {
+                    const errorData = await res.json();
+                    alert('Lỗi: ' + (errorData.detail || 'Không thể thực hiện yêu cầu'));
+                }
+            } catch (error) {
+                alert('Lỗi khi gửi yêu cầu: ' + (error.message || 'Không thể kết nối đến server'));
+            }
+        }
+
+        function editHocKy(IDHOCKY, TENHK, NAMHOC) {
+            document.getElementById('IDHOCKY').value = IDHOCKY;
+            document.getElementById('TENHK').value = TENHK;
+            document.getElementById('NAMHOC').value = NAMHOC;
+            document.getElementById('saveButton').textContent = ' Cập nhật';
+            document.getElementById('cancelButton').classList.remove('hidden');
+        }
+
+        async function deleteHocKy(IDHOCKY) {
+            if (confirm(`Bạn có chắc muốn xóa học kỳ ${IDHOCKY}?`)) {
+                try {
+                    const res = await fetch(`/api/hocky/${IDHOCKY}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        alert('Xóa học kỳ thành công!');
+                        loadHocKy();
+                    } else {
+                        const errorData = await res.json();
+                        alert('Lỗi khi xóa: ' + (errorData.detail || 'Không thể xóa học kỳ'));
+                    }
+                } catch (error) {
+                    alert('Lỗi khi gửi yêu cầu xóa: ' + (error.message || 'Không thể kết nối đến server'));
+                }
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('IDHOCKY').value = '';
+            document.getElementById('TENHK').value = '';
+            document.getElementById('NAMHOC').value = '';
+            document.getElementById('saveButton').textContent = ' Lưu';
+            document.getElementById('cancelButton').classList.add('hidden');
+        }
+
+        window.onload = loadHocKy;
+    </script>
+</body>
+</html>
