@@ -11,7 +11,6 @@
         <h1 class="text-2xl font-bold mb-4 text-indigo-700">Quản lý sinh viên</h1>
         <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
 
-        <!-- Form Thêm/Sửa -->
         <div class="mb-6 bg-white p-4 rounded shadow">
             <h2 class="text-xl font-semibold mb-2">Thêm / Sửa sinh viên</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -27,7 +26,6 @@
             </div>
         </div>
 
-        <!-- Bảng sinh viên -->
         <div class="overflow-x-auto bg-white shadow rounded">
             <table class="min-w-full border border-gray-300">
                 <thead class="bg-gray-200 text-gray-700">
@@ -46,7 +44,6 @@
     </div>
 
     <script>
-        // Hàm thoát ký tự HTML để tránh XSS
         function escapeHTML(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -87,7 +84,6 @@
             const NGANHHOC = document.getElementById('NGANHHOC').value.trim();
             const NGAYSINH = document.getElementById('NGAYSINH').value;
 
-            // Validation
             if (!IDSINHVIEN || !HOVATEN || !LOP || !NGANHHOC) {
                 alert('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã SV, Họ tên, Lớp, Ngành học).');
                 return;

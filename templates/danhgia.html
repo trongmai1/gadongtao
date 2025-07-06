@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý đánh giá</title>
+    <title>Quản lý đánh giá rèn luyện</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
 <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4 text-indigo-700">📝 Quản lý đánh giá theo tiêu chí</h1>
+    <h1 class="text-2xl font-bold text-indigo-700 mb-4">📋 Quản lý đánh giá rèn luyện</h1>
     <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
 
+    <!-- Form -->
     <div class="bg-white p-4 rounded shadow mb-6">
-        <h2 class="text-xl font-semibold mb-3">Chọn sinh viên + học kỳ</h2>
+        <h2 class="text-xl font-semibold mb-2">Thêm / Sửa đánh giá</h2>
         <div class="grid md:grid-cols-2 gap-4">
-            <select id="IDSINHVIEN" class="border p-2 rounded" required>
-                <option value="">Chọn sinh viên</option>
+            <input id="IDPHIEU" type="text" placeholder="Mã phiếu (Pxxx)" class="border p-2 rounded" pattern="P[0-9]{3}" title="Mã phiếu phải bắt đầu bằng 'P' và theo sau là 3 chữ số (ví dụ: P001)" required>
+            <select id="IDTIEUCHI" class="border p-2 rounded" required>
+                <option value="">Chọn tiêu chí</option>
             </select>
-            <select id="IDHOCKY" class="border p-2 rounded" required>
-                <option value="">Chọn học kỳ</option>
+            <input id="SVDANHGIA" type="number" placeholder="Điểm tự đánh giá (0-100)" class="border p-2 rounded" min="0" max="100" required>
+            <input id="CANBODANHGIA" type="number" placeholder="Điểm cán bộ (0-100)" class="border p-2 rounded" min="0" max="100" required>
+            <select id="CVHTXACNHAN" class="border p-2 rounded" required>
+                <option value="">Chọn xác nhận</option>
+                <option value="1">Đồng ý</option>
+                <option value="0">Không đồng ý</option>
             </select>
-            <div class="border p-2 rounded overflow-auto max-h-48" id="tieuchiCheckboxes">
-                <p class="text-sm text-gray-500">Đang tải tiêu chí...</p>
-            </div>
-            <input id="SVDANHGIA" type="number" placeholder="Điểm SV tự đánh giá (0–25)" class="border p-2 rounded" min="0" max="25" required>
-            <input id="CANBODANHGIA" type="number" placeholder="Điểm cán bộ đánh giá (0–25)" class="border p-2 rounded" min="0" max="25" required>
-            <input id="CVHTXACNHAN" type="number" placeholder="Điểm CVHT xác nhận (0–25)" class="border p-2 rounded" min="0" max="25" required>
             <div class="flex space-x-2 col-span-full md:col-span-1">
                 <button id="saveButton" onclick="addOrUpdateDanhGia()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">💾 Lưu</button>
                 <button id="cancelButton" onclick="clearForm()" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition hidden">🚫 Hủy</button>
@@ -33,16 +33,16 @@
         </div>
     </div>
 
+    <!-- Table -->
     <div class="bg-white rounded shadow overflow-x-auto">
         <table class="min-w-full border-collapse border border-gray-300">
             <thead class="bg-gray-200 text-gray-700">
                 <tr>
-                    <th class="border p-2">Mã sinh viên</th>
-                    <th class="border p-2">Học kỳ</th>
-                    <th class="border p-2">Mã tiêu chí</th>
-                    <th class="border p-2">SV tự đánh giá</th>
-                    <th class="border p-2">Cán bộ đánh giá</th>
-                    <th class="border p-2">CVHT xác nhận</th>
+                    <th class="border p-2">Mã phiếu</th>
+                    <th class="border p-2">Tiêu chí</th>
+                    <th class="border p-2">Điểm tự đánh giá</th>
+                    <th class="border p-2">Điểm cán bộ</th>
+                    <th class="border p-2">Xác nhận CVHT</th>
                     <th class="border p-2">Hành động</th>
                 </tr>
             </thead>
@@ -52,72 +52,28 @@
 </div>
 
 <script>
-    let sinhvienMap = {};
-    let hockyMap = {};
+    let tieuChiMap = {};
 
+    // Hàm thoát ký tự HTML để tránh XSS
     function escapeHTML(str) {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
     }
 
-    async function loadSinhVienDropdown() {
-        try {
-            const res = await fetch('/api/sinhvien');
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            const select = document.getElementById('IDSINHVIEN');
-            select.innerHTML = '<option value="">Chọn sinh viên</option>';
-            data.forEach(sv => {
-                sinhvienMap[sv.IDSINHVIEN] = sv.HOVATEN;
-                const option = document.createElement('option');
-                option.value = sv.IDSINHVIEN;
-                option.textContent = `${escapeHTML(sv.IDSINHVIEN)} - ${escapeHTML(sv.HOVATEN)}`;
-                select.appendChild(option);
-            });
-        } catch (error) {
-            alert('Lỗi khi tải danh sách sinh viên: ' + (error.message || 'Không thể kết nối đến server'));
-        }
-    }
-
-    async function loadHocKyDropdown() {
-        try {
-            const res = await fetch('/api/hocky');
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            const select = document.getElementById('IDHOCKY');
-            select.innerHTML = '<option value="">Chọn học kỳ</option>';
-            data.forEach(hk => {
-                hockyMap[hk.IDHOCKY] = hk.TENHK;
-                const option = document.createElement('option');
-                option.value = hk.IDHOCKY;
-                option.textContent = `${escapeHTML(hk.IDHOCKY)} - ${escapeHTML(hk.TENHK)}`;
-                select.appendChild(option);
-            });
-        } catch (error) {
-            alert('Lỗi khi tải danh sách học kỳ: ' + (error.message || 'Không thể kết nối đến server'));
-        }
-    }
-
-    async function loadTieuChiCheckboxes() {
+    async function loadTieuChiDropdown() {
         try {
             const res = await fetch('/api/tieuchi');
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
-            const container = document.getElementById('tieuchiCheckboxes');
-            container.innerHTML = '';
-            if (data.length === 0) {
-                container.innerHTML = '<p class="text-sm text-gray-500">Không có tiêu chí nào.</p>';
-                return;
-            }
+            const select = document.getElementById('IDTIEUCHI');
+            select.innerHTML = '<option value="">Chọn tiêu chí</option>';
             data.forEach(tc => {
-                const div = document.createElement('div');
-                div.className = "flex items-center gap-2 mb-1";
-                div.innerHTML = `
-                    <input type="checkbox" id="tc-${escapeHTML(tc.IDTIEUCHI)}" value="${escapeHTML(tc.IDTIEUCHI)}">
-                    <label for="tc-${escapeHTML(tc.IDTIEUCHI)}" class="text-sm">${escapeHTML(tc.IDTIEUCHI)} - ${escapeHTML(tc.TENTIEUCHI)}</label>
-                `;
-                container.appendChild(div);
+                tieuChiMap[tc.IDTIEUCHI] = tc.TENTIEUCHI;
+                const opt = document.createElement('option');
+                opt.value = tc.IDTIEUCHI;
+                opt.textContent = `${escapeHTML(tc.IDTIEUCHI)} - ${escapeHTML(tc.TENTIEUCHI)}`;
+                select.appendChild(opt);
             });
         } catch (error) {
             alert('Lỗi khi tải danh sách tiêu chí: ' + (error.message || 'Không thể kết nối đến server'));
@@ -131,94 +87,141 @@
             const data = await res.json();
             const tbody = document.getElementById('danhgiaTable');
             tbody.innerHTML = '';
-            for (const dg of data) {
-                const [IDSINHVIEN, IDHOCKY] = dg.IDPHIEU.split('-');
+            data.forEach(dg => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="border p-2">${escapeHTML(IDSINHVIEN)}</td>
-                    <td class="border p-2">${escapeHTML(hockyMap[IDHOCKY] || IDHOCKY)}</td>
-                    <td class="border p-2">${escapeHTML(dg.IDTIEUCHI)}</td>
+                    <td class="border p-2">${escapeHTML(dg.IDPHIEU)}</td>
+                    <td class="border p-2">${escapeHTML(tieuChiMap[dg.IDTIEUCHI] || dg.IDTIEUCHI)}</td>
                     <td class="border p-2">${dg.SVDANHGIA}</td>
                     <td class="border p-2">${dg.CANBODANHGIA}</td>
-                    <td class="border p-2">${dg.CVHTXACNHAN}</td>
+                    <td class="border p-2">${dg.CVHTXACNHAN === 1 ? 'Đồng ý' : 'Không đồng ý'}</td>
                     <td class="border p-2 space-x-1">
                         <button onclick="editDanhGia('${escapeHTML(dg.IDPHIEU)}', '${escapeHTML(dg.IDTIEUCHI)}', ${dg.SVDANHGIA}, ${dg.CANBODANHGIA}, ${dg.CVHTXACNHAN})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">✏️ Sửa</button>
                         <button onclick="deleteDanhGia('${escapeHTML(dg.IDPHIEU)}', '${escapeHTML(dg.IDTIEUCHI)}')" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">🗑️ Xóa</button>
                     </td>
                 `;
                 tbody.appendChild(row);
-            }
+            });
         } catch (error) {
             alert('Lỗi khi tải danh sách đánh giá: ' + (error.message || 'Không thể kết nối đến server'));
         }
     }
 
     async function addOrUpdateDanhGia() {
-        const IDSINHVIEN = document.getElementById('IDSINHVIEN').value;
-        const IDHOCKY = document.getElementById('IDHOCKY').value;
+        const IDPHIEU = document.getElementById('IDPHIEU').value.trim();
+        const IDTIEUCHI = document.getElementById('IDTIEUCHI').value;
         const SVDANHGIA = parseInt(document.getElementById('SVDANHGIA').value);
         const CANBODANHGIA = parseInt(document.getElementById('CANBODANHGIA').value);
-        const CVHTXACNHAN = parseInt(document.getElementById('CVHTXACNHAN').value);
-        const checked = Array.from(document.querySelectorAll('#tieuchiCheckboxes input:checked')).map(el => el.value);
+        const CVHTXACNHAN = document.getElementById('CVHTXACNHAN').value;
 
         // Validation
-        if (!IDSINHVIEN || !IDHOCKY || checked.length === 0) {
-            alert('Vui lòng chọn sinh viên, học kỳ và ít nhất một tiêu chí.');
+        if (!IDPHIEU || !IDTIEUCHI || isNaN(SVDANHGIA) || isNaN(CANBODANHGIA) || !CVHTXACNHAN) {
+            alert('Vui lòng nhập đầy đủ thông tin (Mã phiếu, Tiêu chí, Điểm tự đánh giá, Điểm cán bộ, Xác nhận).');
             return;
         }
-        if ([SVDANHGIA, CANBODANHGIA, CVHTXACNHAN].some(d => isNaN(d) || d < 0 || d > 25)) {
-            alert('Tất cả điểm phải từ 0 đến 25.');
+        if (!/P[0-9]{3}/.test(IDPHIEU)) {
+            alert('Mã phiếu phải bắt đầu bằng "P" và theo sau là 3 chữ số (ví dụ: P001).');
+            return;
+        }
+        if (SVDANHGIA < 0 || SVDANHGIA > 100 || CANBODANHGIA < 0 || CANBODANHGIA > 100) {
+            alert('Điểm tự đánh giá và điểm cán bộ phải từ 0 đến 100.');
             return;
         }
 
-        const IDPHIEU = `${IDSINHVIEN}-${IDHOCKY}`;
-        for (const IDTIEUCHI of checked) {
-            try {
-                const resCheck = await fetch(`/api/danhgia?IDSINHVIEN=${encodeURIComponent(IDSINHVIEN)}&IDHOCKY=${encodeURIComponent(IDHOCKY)}&IDTIEUCHI=${encodeURIComponent(IDTIEUCHI)}`);
-                const method = resCheck.ok ? 'PUT' : 'POST';
-                const url = method === 'POST' ? '/api/danhgia' : `/api/danhgia?IDSINHVIEN=${encodeURIComponent(IDSINHVIEN)}&IDHOCKY=${encodeURIComponent(IDHOCKY)}&IDTIEUCHI=${encodeURIComponent(IDTIEUCHI)}`;
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ IDPHIEU, IDTIEUCHI, SVDANHGIA, CANBODANHGIA, CVHTXACNHAN })
-                });
+        const method = document.getElementById('saveButton').textContent.includes('Cập nhật') ? 'PUT' : 'POST';
+        const url = method === 'POST' ? '/api/danhgia' : `/api/danhgia/${IDPHIEU}/${IDTIEUCHI}`;
 
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    alert(`Lỗi khi lưu tiêu chí ${IDTIEUCHI}: ${errorData.detail || 'Không thể thực hiện yêu cầu'}`);
-                    return;
-                }
-            } catch (error) {
-                alert(`Lỗi khi gửi yêu cầu cho tiêu chí ${IDTIEUCHI}: ${error.message || 'Không thể kết nối đến server'}`);
-                return;
+        const formData = new URLSearchParams({
+            IDPHIEU,
+            IDTIEUCHI,
+            SVDANHGIA: SVDANHGIA.toString(),
+            CANBODANHGIA: CANBODANHGIA.toString(),
+            CVHTXACNHAN
+        });
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+
+            if (res.ok) {
+                alert(method === 'POST' ? 'Thêm đánh giá thành công!' : 'Cập nhật đánh giá thành công!');
+                clearForm();
+                loadDanhGia();
+                // Cập nhật phiếu điểm nếu cần (tính tổng điểm)
+                updatePhieuDiem(IDPHIEU);
+            } else {
+                const errorData = await res.json();
+                alert('Lỗi: ' + (errorData.detail || 'Không thể thực hiện yêu cầu'));
             }
+        } catch (error) {
+            alert('Lỗi khi gửi yêu cầu: ' + (error.message || 'Không thể kết nối đến server'));
         }
+    }
 
-        alert('Lưu đánh giá thành công!');
-        clearForm();
-        loadDanhGia();
+    async function updatePhieuDiem(IDPHIEU) {
+        try {
+            const res = await fetch(`/api/phieudiem/${IDPHIEU}`);
+            if (!res.ok) throw new Error(await res.text());
+            const phieu = (await res.json())[0];
+            const danhGiaRes = await fetch(`/api/danhgia?IDPHIEU=${IDPHIEU}`);
+            if (!danhGiaRes.ok) throw new Error(await danhGiaRes.text());
+            const danhGiaData = await danhGiaRes.json();
+            const tongDiem = calculateTongDiem(danhGiaData);
+            const xepLoai = getXepLoai(tongDiem);
+            const formData = new URLSearchParams({
+                IDPHIEU,
+                IDSINHVIEN: phieu.IDSINHVIEN,
+                IDHOCKY: phieu.IDHOCKY,
+                TONGDIEM: tongDiem.toString(),
+                XEPLOAI: xepLoai,
+                GHICHU: phieu.GHICHU || ''
+            });
+            const updateRes = await fetch(`/api/phieudiem/${IDPHIEU}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            if (!updateRes.ok) throw new Error(await updateRes.text());
+        } catch (error) {
+            console.error('Lỗi khi cập nhật phiếu điểm:', error);
+        }
+    }
+
+    function calculateTongDiem(danhGiaData) {
+        if (!danhGiaData.length) return 0;
+        const avg = danhGiaData.reduce((sum, dg) => sum + (dg.SVDANHGIA + dg.CANBODANHGIA) / 2, 0) / danhGiaData.length;
+        return danhGiaData.every(dg => dg.CVHTXACNHAN === '1') ? avg : avg * 0.9; // Giảm 10% nếu không đồng ý
+    }
+
+    function getXepLoai(tongDiem) {
+        if (tongDiem >= 90) return 'Xuất sắc';
+        if (tongDiem >= 80) return 'Tốt';
+        if (tongDiem >= 65) return 'Khá';
+        if (tongDiem >= 50) return 'Trung bình';
+        return 'Yếu';
     }
 
     function editDanhGia(IDPHIEU, IDTIEUCHI, SVDANHGIA, CANBODANHGIA, CVHTXACNHAN) {
-        const [IDSINHVIEN, IDHOCKY] = IDPHIEU.split('-');
-        document.getElementById('IDSINHVIEN').value = IDSINHVIEN;
-        document.getElementById('IDHOCKY').value = IDHOCKY;
-        document.querySelectorAll('#tieuchiCheckboxes input').forEach(el => el.checked = el.value === IDTIEUCHI);
+        document.getElementById('IDPHIEU').value = IDPHIEU;
+        document.getElementById('IDTIEUCHI').value = IDTIEUCHI;
         document.getElementById('SVDANHGIA').value = SVDANHGIA;
         document.getElementById('CANBODANHGIA').value = CANBODANHGIA;
         document.getElementById('CVHTXACNHAN').value = CVHTXACNHAN;
-        document.getElementById('saveButton').textContent = 'Cập nhật';
+        document.getElementById('saveButton').textContent = '📝 Cập nhật';
         document.getElementById('cancelButton').classList.remove('hidden');
     }
 
     async function deleteDanhGia(IDPHIEU, IDTIEUCHI) {
-        const [IDSINHVIEN, IDHOCKY] = IDPHIEU.split('-');
-        if (confirm(`Bạn có chắc muốn xóa đánh giá tiêu chí ${IDTIEUCHI} cho sinh viên ${IDSINHVIEN} trong học kỳ ${IDHOCKY}?`)) {
+        if (confirm(`Bạn có chắc muốn xóa đánh giá với mã phiếu ${IDPHIEU} và tiêu chí ${IDTIEUCHI}?`)) {
             try {
-                const res = await fetch(`/api/danhgia?IDSINHVIEN=${encodeURIComponent(IDSINHVIEN)}&IDHOCKY=${encodeURIComponent(IDHOCKY)}&IDTIEUCHI=${encodeURIComponent(IDTIEUCHI)}`, { method: 'DELETE' });
+                const res = await fetch(`/api/danhgia/${IDPHIEU}/${IDTIEUCHI}`, { method: 'DELETE' });
                 if (res.ok) {
                     alert('Xóa đánh giá thành công!');
                     loadDanhGia();
+                    updatePhieuDiem(IDPHIEU); // Cập nhật phiếu điểm sau khi xóa
                 } else {
                     const errorData = await res.json();
                     alert('Lỗi khi xóa: ' + (errorData.detail || 'Không thể xóa đánh giá'));
@@ -230,20 +233,17 @@
     }
 
     function clearForm() {
-        document.getElementById('IDSINHVIEN').value = '';
-        document.getElementById('IDHOCKY').value = '';
+        document.getElementById('IDPHIEU').value = '';
+        document.getElementById('IDTIEUCHI').value = '';
         document.getElementById('SVDANHGIA').value = '';
         document.getElementById('CANBODANHGIA').value = '';
         document.getElementById('CVHTXACNHAN').value = '';
-        document.querySelectorAll('#tieuchiCheckboxes input').forEach(el => el.checked = false);
-        document.getElementById('saveButton').textContent = ' Lưu';
+        document.getElementById('saveButton').textContent = '💾 Lưu';
         document.getElementById('cancelButton').classList.add('hidden');
     }
 
     window.onload = async () => {
-        await loadSinhVienDropdown();
-        await loadHocKyDropdown();
-        await loadTieuChiCheckboxes();
+        await loadTieuChiDropdown();
         await loadDanhGia();
     };
 </script>

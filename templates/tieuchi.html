@@ -11,7 +11,6 @@
         <h1 class="text-2xl font-bold mb-4 text-indigo-700">📌 Quản lý tiêu chí đánh giá</h1>
         <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← Quay lại trang chủ</a>
 
-        <!-- Form Thêm/Sửa -->
         <div class="mb-6 bg-white p-4 rounded shadow">
             <h2 class="text-xl font-semibold mb-2">Thêm / Sửa tiêu chí</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -25,7 +24,6 @@
             </div>
         </div>
 
-        <!-- Bảng tiêu chí -->
         <div class="overflow-x-auto bg-white shadow rounded">
             <table class="min-w-full border border-gray-300">
                 <thead class="bg-gray-200 text-gray-700">
@@ -42,7 +40,6 @@
     </div>
 
     <script>
-        // Hàm thoát ký tự HTML để tránh XSS
         function escapeHTML(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -79,7 +76,6 @@
             const TENTIEUCHI = document.getElementById('TENTIEUCHI').value.trim();
             const DIEMTOIDA = parseInt(document.getElementById('DIEMTOIDA').value);
 
-            // Validation
             if (!IDTIEUCHI || !TENTIEUCHI || isNaN(DIEMTOIDA)) {
                 alert('Vui lòng nhập đầy đủ thông tin (Mã tiêu chí, Tên tiêu chí, Điểm tối đa).');
                 return;
